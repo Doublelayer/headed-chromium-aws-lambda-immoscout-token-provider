@@ -1,4 +1,4 @@
-# headed undetected chromedriver on AWS Lambda
+# headed undetected chromedriver on AWS Lambda to provide immoscout reese84 token
 
 > **Note**
 >
@@ -8,4 +8,4 @@ This image goes with these versions:
 - Python 3.9
 - chromium 114.0.5735.0
 - chromedriver 114.0.5735.90
-- selenium 4.9.0# headed-chromium-aws-lambda-immoscout-token-provider
+- selenium 4.9.0
