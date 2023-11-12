@@ -1,36 +1,14 @@
 import json
-import os
 import time
-import undetected_chromedriver as uc
+import boto3
+
 from pyvirtualdisplay import Display
 from selenium.common import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-from tempfile import mkdtemp
 
-
-def get_uc_driver():
-    options = uc.ChromeOptions()
-    options.headless = False
-    options.add_argument('--no-sandbox')
-    options.add_argument("--disable-gpu")
-    options.add_argument("--single-process")
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument(f"--user-data-dir={mkdtemp()}")
-    options.add_argument(f"--data-path={mkdtemp()}")
-    options.add_argument(f"--disk-cache-dir={mkdtemp()}")
-
-    driver_executable_path = '/tmp/chromedriver'
-    os.system(f'cp /opt/chromedriver {driver_executable_path}')
-    os.chmod(driver_executable_path, 0o777)
-
-    driver = uc.Chrome(options=options,
-                       browser_executable_path='/opt/chrome/chrome',
-                       driver_executable_path=driver_executable_path,
-                       version_main=114)  # , use_subprocess=True)
-
-    return driver
+from driver import get_uc_driver
 
 
 def handler(event=None, context=None):
@@ -55,18 +33,25 @@ def handler(event=None, context=None):
                     .until(EC.visibility_of_element_located((By.ID, "captcha-box"))) \
                     .click()
                 print("captcha box was clicked...")
-                time.sleep(5)
                 print("waiting for cookie...")
                 WebDriverWait(driver, 10).until(lambda driver: "roboter" not in driver.title.lower())
                 reese_token = WebDriverWait(driver, timeout=10).until(lambda d: d.get_cookie('reese84'))['value']
                 print(f"reese84 cookie found: {reese_token}")
-                new_token = f"reese84={reese_token};"
-                print("SUCCESS! driver quiting...")
 
-                return {
-                    'statusCode': 200,
-                    'body': new_token
+                cookie_string = ""
+                all_cookies = driver.get_cookies()
+                for cookie in all_cookies:
+                    cookie_string += f"{cookie['name']}={cookie['value']};"
+
+                file_content = {
+                    "cookieString": cookie_string,
+                    "raw": driver.get_cookies()
                 }
+
+                s3 = boto3.client('s3')
+                s3.put_object(Body=bytes(json.dumps(file_content).encode('UTF-8')), Bucket="immocookies", Key='immoscout-cookies.json')
+
+                return file_content
 
             except TimeoutException:
                 if "roboter" in driver.title.lower():
@@ -82,6 +67,6 @@ def handler(event=None, context=None):
         print('type is:', e.__class__.__name__)
 
         return {
-            'statusCode': 200,
+            'statusCode': 500,
             'body': json.dumps({'error': f'{e}'})
         }

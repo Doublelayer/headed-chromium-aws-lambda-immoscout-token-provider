@@ -16,5 +16,5 @@ RUN cp -r /opt/chrome-linux /opt/chrome
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
-COPY main.py ./
-CMD [ "main.handler" ]
+COPY . .
+CMD [ "immoscout.handler" ] # override this in lambda config
